@@ -1,9 +1,11 @@
 package com.narxoz.rpg.battle;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
-
 public final class BattleEngine {
+
     private static BattleEngine instance;
     private Random random = new Random(1L);
 
@@ -23,16 +25,75 @@ public final class BattleEngine {
     }
 
     public void reset() {
-        // TODO: reset any battle state if you add it
     }
 
     public EncounterResult runEncounter(List<Combatant> teamA, List<Combatant> teamB) {
-        // TODO: validate inputs and run round-based battle
-        // TODO: use random if you add critical hits or target selection
+
+        if (teamA == null || teamB == null || teamA.isEmpty() || teamB.isEmpty()) {
+            throw new IllegalArgumentException("Teams must not be null or empty");
+        }
+
+        List<Combatant> a = new ArrayList<>(teamA);
+        List<Combatant> b = new ArrayList<>(teamB);
+
         EncounterResult result = new EncounterResult();
-        result.setWinner("TBD");
-        result.setRounds(0);
-        result.addLog("TODO: implement battle simulation");
+        int rounds = 0;
+
+        while (!a.isEmpty() && !b.isEmpty()) {
+            rounds++;
+            result.addLog("=== Round " + rounds + " ===");
+
+            attackPhase(a, b, result);
+            removeDead(b);
+
+            if (b.isEmpty()) break;
+
+            attackPhase(b, a, result);
+            removeDead(a);
+        }
+
+        result.setRounds(rounds);
+        result.setWinner(a.isEmpty() ? "Team B" : "Team A");
         return result;
+    }
+
+    private void attackPhase(List<Combatant> attackers,
+                             List<Combatant> defenders,
+                             EncounterResult result) {
+
+        for (Combatant attacker : attackers) {
+
+            if (!attacker.isAlive() || defenders.isEmpty()) continue;
+
+            Combatant target = defenders.get(0);
+
+            int damage = attacker.getAttackPower();
+
+            // 20% шанс крит-удара
+            if (random.nextDouble() < 0.2) {
+                damage *= 2;
+                result.addLog(attacker.getName() + " lands CRITICAL hit!");
+            }
+
+            target.takeDamage(damage);
+
+            result.addLog(attacker.getName() +
+                    " attacks " +
+                    target.getName() +
+                    " for " + damage + " damage");
+
+            if (!target.isAlive()) {
+                result.addLog(target.getName() + " has been defeated!");
+            }
+        }
+    }
+
+    private void removeDead(List<Combatant> team) {
+        Iterator<Combatant> iterator = team.iterator();
+        while (iterator.hasNext()) {
+            if (!iterator.next().isAlive()) {
+                iterator.remove();
+            }
+        }
     }
 }
